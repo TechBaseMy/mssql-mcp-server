@@ -1,5 +1,111 @@
 # MS SQL MCP Server 1.1
 
+# INSTRUCTIONS FOR TECHBASE
+
+Before diving into the details of this tool, please follow these setup instructions:
+
+1. Clone the repository using:
+   ```bash
+   git clone https://github.com/TechBaseMy/mssql-mcp-server.git
+   ```
+
+2. Navigate to the project directory:
+   ```bash
+   cd mssql-mcp-server
+   ```
+
+3. Create your environment configuration file:
+   ```bash
+   cp .env.example .env
+   ```
+
+4. Edit the `.env` file with your database connection details:
+   ```
+   DB_USER=your_username
+   DB_PASSWORD=your_password
+   DB_SERVER=your_server_name_or_ip
+   DB_DATABASE=your_database_name
+   PORT=3333
+   HOST=0.0.0.0
+   TRANSPORT=stdio
+   SERVER_URL=http://localhost:3333
+   DEBUG=false
+   QUERY_RESULTS_PATH=/path/to/query_results
+   ```
+
+5. Test the server to ensure it's working properly:
+   ```bash
+   npm start
+   ```
+   or
+   ```bash
+   node server.mjs
+   ```
+
+# GEMINI CLI INSTALLATION
+
+To use Gemini CLI, you'll need Node.js version 20 or higher. Follow these steps to install and use Gemini CLI:
+
+1. Install Gemini CLI globally using npm:
+   ```bash
+   npm install -g @google/gemini-cli
+   ```
+
+2. Start using Gemini CLI in your projects:
+   - Navigate to your project folder using the `cd` command
+   - Launch Gemini by simply typing:
+   ```bash
+   gemini
+   ```
+
+For the most up-to-date installation instructions, features, and documentation, please visit the official Gemini CLI GitHub repository:
+https://github.com/google-gemini/gemini-cli
+
+# GEMINI CLI INTEGRATION
+
+To use this MCP server with Gemini CLI, follow these steps:
+
+1. Locate the Gemini settings file in your Windows user folder:
+   ```
+   C:\Users\<Windows Username>\.gemini\settings.json
+   ```
+
+2. Edit the settings.json file to include the MCP server configuration:
+   ```json
+   {
+     "mcpServers": {
+       "mssql": {
+         "command": "<absolute path to node.exe>",
+         "args": [
+           "<absolute path to mssql-mcp-server repository>/server.mjs"
+         ],
+         "cwd": "<absolute path to mssql-mcp-server repository>"
+       }
+     }
+   }
+   ```
+
+3. Example configuration:
+   ```json
+   {
+     "theme": "Shades Of Purple",
+     "selectedAuthType": "oauth-personal",
+     "mcpServers": {
+       "mssql": {
+         "command": "C:/Users/JxLee/AppData/Roaming/nvm/v18.20.3/node.exe",
+         "args": [
+           "C:/Users/JxLee/Downloads/Exported/Exported/New folder/New folder/temp/mssql-mcp-server/server.mjs"
+         ],
+         "cwd": "C:/Users/JxLee/Downloads/Exported/Exported/New folder/New folder/temp/mssql-mcp-server"
+       }
+     }
+   }
+   ```
+
+---
+
+# TOOL DOCUMENTATION
+
 An easy-to-use bridge that lets AI assistants like Claude directly query and explore Microsoft SQL Server databases. No coding experience required!
 
 ## What Does This Tool Do?
