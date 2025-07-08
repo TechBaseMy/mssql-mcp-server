@@ -130,25 +130,25 @@ function registerExecuteQueryTool(server, registerWithAllAliases) {
                 const tableNameRegex = /\bfrom\s+(\[?[\w_.]+\]?)/gi;
                 const matches = [...lowerSql.matchAll(tableNameRegex)];
                 
-            // Variables for tracking
+                // Variables for tracking
                 let totalCount = null;
                 
-            // Execute the query
-            logger.info(`Executing SQL: ${sql}`);
-            const startTime = Date.now();
-            const result = await executeQuery(sql, parameters);
-            const executionTime = Date.now() - startTime;
+                // Execute the query
+                logger.info(`Executing SQL: ${sql}`);
+                const startTime = Date.now();
+                const result = await executeQuery(sql, parameters);
+                const executionTime = Date.now() - startTime;
                 const rowCount = result.recordset?.length || 0;
-            logger.info(`SQL executed successfully in ${executionTime}ms, returned ${rowCount} rows`);
-            
-            // Format response for display
+                logger.info(`SQL executed successfully in ${executionTime}ms, returned ${rowCount} rows`);
+                
+                // Format response for display
                 let responseText = '';
                 
                 if (rowCount === 0) {
                     responseText = "Query executed successfully, but returned no rows.";
                 } else {
                     // Basic result summary
-                responseText = `Query executed successfully in ${executionTime}ms and returned ${rowCount} rows.`;
+                    responseText = `Query executed successfully in ${executionTime}ms and returned ${rowCount} rows.`;
                     
                     responseText += '\n\n';
                     
@@ -156,30 +156,45 @@ function registerExecuteQueryTool(server, registerWithAllAliases) {
                     if (result.recordset && result.recordset.length > 0) {
                         responseText += `Columns: ${Object.keys(result.recordset[0]).join(', ')}\n\n`;
                     }
-            }
-            
-            // Generate UUID for tracking
-            const uuid = crypto.randomUUID();
-            
-            // Return both the text response AND the actual data in MCP format
+                }
+                
+                // Generate UUID for tracking
+                const uuid = crypto.randomUUID();
+                
+                // Return both the text response AND the actual data in MCP format
                 return {
-                    content: [{
-                        type: "text",
-                        text: responseText
-                    }],
-                result: {
-                    rowCount: rowCount,
-                    results: result.recordset || [],
-                    metadata: {
-                        uuid: uuid,
-                        pagination: null,
-                        totalCount: totalCount,
-                        executionTimeMs: executionTime
+                    content: [
+                        {
+                            type: "text",
+                            text: responseText
+                        },
+                        {
+                            type: "text",
+                            text: `Metadata: ${JSON.stringify({
+                                rowCount,
+                                totalCount,
+                                executionTimeMs: executionTime,
+                                uuid
+                            }, null, 2)}`
+                        },
+                        {
+                            type: "text",
+                            text: `Results: ${JSON.stringify(result.recordset || [], null, 2)}`
+                        }
+                    ],
+                    result: {
+                        rowCount: rowCount,
+                        results: result.recordset || [],
+                        metadata: {
+                            uuid: uuid,
+                            pagination: null,
+                            totalCount: totalCount,
+                            executionTimeMs: executionTime
                         }
                     }
                 };
             } catch (err) {
-            logger.error(`SQL execution failed: ${err.message}`);
+                logger.error(`SQL execution failed: ${err.message}`);
                 
                 return {
                     content: [{
@@ -193,7 +208,7 @@ function registerExecuteQueryTool(server, registerWithAllAliases) {
 
     if (registerWithAllAliases) {
         registerWithAllAliases("execute_query", schema, handler);
-                } else {
+    } else {
         server.tool("execute_query", schema, handler);
     }
 }
@@ -278,17 +293,30 @@ function registerTableDetailsTool(server, registerWithAllAliases) {
             
             // Return both the formatted markdown and the structured data
                 return {
-                    content: [{
-                        type: "text",
-                        text: markdown
-                }],
-                result: {
-                    columns: result.recordset || [],
-                    metadata: {
-                        rowCount: result.recordset.length,
-                        tableName: `${sanitizedSchema}.${sanitizedTable}`
+                    content: [
+                        {
+                            type: "text",
+                            text: markdown
+                        },
+                        {
+                            type: "text",
+                            text: `Metadata: ${JSON.stringify({
+                                tableName: `${sanitizedSchema}.${sanitizedTable}`,
+                                rowCount: result.recordset.length
+                            }, null, 2)}`
+                        },
+                        {
+                            type: "text",
+                            text: `Columns: ${JSON.stringify(result.recordset || [], null, 2)}`
+                        }
+                    ],
+                    result: {
+                        columns: result.recordset || [],
+                        metadata: {
+                            rowCount: result.recordset.length,
+                            tableName: `${sanitizedSchema}.${sanitizedTable}`
+                        }
                     }
-                }
                 };
             } catch (err) {
                 logger.error(`Error getting table details: ${err.message}`);
@@ -385,15 +413,34 @@ function registerProcedureDetailsTool(server, registerWithAlias) {
                 markdown += '\n```\n';
                 
                 return {
-                    content: [{
-                        type: "text",
-                        text: markdown
-                }],
-                result: {
-                    procedureName: sanitizedProcName,
-                    parameters: paramResult.recordset || [],
-                    definition: result.recordset[0].ROUTINE_DEFINITION || 'Definition not available'
-                }
+                    content: [
+                        {
+                            type: "text",
+                            text: markdown
+                        },
+                        {
+                            type: "text",
+                            text: `Metadata: ${JSON.stringify({
+                                procedureName: sanitizedProcName,
+                                parameterCount: paramResult.recordset.length
+                            }, null, 2)}`
+                        },
+                        {
+                            type: "text",
+                            text: `Parameters: ${JSON.stringify(paramResult.recordset || [], null, 2)}`
+                        },
+                        {
+                            type: "text",
+                            text: `Definition: ${JSON.stringify({
+                                definition: result.recordset[0].ROUTINE_DEFINITION || 'Definition not available'
+                            }, null, 2)}`
+                        }
+                    ],
+                    result: {
+                        procedureName: sanitizedProcName,
+                        parameters: paramResult.recordset || [],
+                        definition: result.recordset[0].ROUTINE_DEFINITION || 'Definition not available'
+                    }
                 };
             } catch (err) {
                 logger.error(`Error getting procedure details: ${err.message}`);
@@ -513,16 +560,36 @@ function registerFunctionDetailsTool(server, registerWithAlias) {
                 markdown += '```\n';
                 
                 return {
-                    content: [{
-                        type: "text",
-                        text: markdown
-                }],
-                result: {
-                    functionName: sanitizedFuncName,
-                    returnType: result.recordset[0].RETURN_TYPE || 'Unknown',
-                    parameters: paramResult.recordset || [],
-                    definition: result.recordset[0].ROUTINE_DEFINITION || 'Definition not available'
-                }
+                    content: [
+                        {
+                            type: "text",
+                            text: markdown
+                        },
+                        {
+                            type: "text",
+                            text: `Metadata: ${JSON.stringify({
+                                functionName: sanitizedFuncName,
+                                returnType: result.recordset[0].RETURN_TYPE || 'Unknown',
+                                parameterCount: paramResult.recordset.length
+                            }, null, 2)}`
+                        },
+                        {
+                            type: "text",
+                            text: `Parameters: ${JSON.stringify(paramResult.recordset || [], null, 2)}`
+                        },
+                        {
+                            type: "text",
+                            text: `Definition: ${JSON.stringify({
+                                definition: result.recordset[0].ROUTINE_DEFINITION || 'Definition not available'
+                            }, null, 2)}`
+                        }
+                    ],
+                    result: {
+                        functionName: sanitizedFuncName,
+                        returnType: result.recordset[0].RETURN_TYPE || 'Unknown',
+                        parameters: paramResult.recordset || [],
+                        definition: result.recordset[0].ROUTINE_DEFINITION || 'Definition not available'
+                    }
                 };
             } catch (err) {
                 logger.error(`Error getting function details: ${err.message}`);
@@ -629,15 +696,34 @@ function registerViewDetailsTool(server, registerWithAlias) {
                 markdown += '```\n';
                 
                 return {
-                    content: [{
-                        type: "text",
-                        text: markdown
-                }],
-                result: {
-                    viewName: sanitizedViewName,
-                    columns: columnResult.recordset || [],
-                    definition: result.recordset[0].VIEW_DEFINITION || 'Definition not available'
-                }
+                    content: [
+                        {
+                            type: "text",
+                            text: markdown
+                        },
+                        {
+                            type: "text",
+                            text: `Metadata: ${JSON.stringify({
+                                viewName: sanitizedViewName,
+                                columnCount: columnResult.recordset.length
+                            }, null, 2)}`
+                        },
+                        {
+                            type: "text",
+                            text: `Columns: ${JSON.stringify(columnResult.recordset || [], null, 2)}`
+                        },
+                        {
+                            type: "text",
+                            text: `Definition: ${JSON.stringify({
+                                definition: result.recordset[0].VIEW_DEFINITION || 'Definition not available'
+                            }, null, 2)}`
+                        }
+                    ],
+                    result: {
+                        viewName: sanitizedViewName,
+                        columns: columnResult.recordset || [],
+                        definition: result.recordset[0].VIEW_DEFINITION || 'Definition not available'
+                    }
                 };
             } catch (err) {
                 logger.error(`Error getting view details: ${err.message}`);
@@ -962,14 +1048,32 @@ function registerDiscoverTablesTool(server, registerWithAlias) {
                 }
                 
                 return {
-                    content: [{
-                        type: "text",
-                        text: markdown
-                }],
-                result: {
-                    tables: result.recordset || [],
-                    rowCounts: tableWithRowCounts
-                }
+                    content: [
+                        {
+                            type: "text",
+                            text: markdown
+                        },
+                        {
+                            type: "text",
+                            text: `Metadata: ${JSON.stringify({
+                                tableCount: result.recordset.length,
+                                pattern: sanitizedPattern,
+                                includeRowCounts
+                            }, null, 2)}`
+                        },
+                        {
+                            type: "text",
+                            text: `Tables: ${JSON.stringify(result.recordset || [], null, 2)}`
+                        },
+                        {
+                            type: "text",
+                            text: `TablesWithRowCounts: ${JSON.stringify(tableWithRowCounts || [], null, 2)}`
+                        }
+                    ],
+                    result: {
+                        tables: result.recordset || [],
+                        rowCounts: tableWithRowCounts
+                    }
                 };
             } catch (err) {
                 logger.error(`Error discovering tables: ${err.message}`);
