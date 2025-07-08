@@ -102,6 +102,24 @@ To use this MCP server with Gemini CLI, follow these steps:
    }
    ```
 
+# VERIFYING MCP SERVER CONNECTION
+
+To verify that your MCP server is properly configured and available for use in Gemini CLI:
+
+1. Start Gemini CLI in your terminal:
+   ```bash
+   gemini
+   ```
+
+2. Once Gemini is running, type the following command and press Enter:
+   ```
+   /mcp
+   ```
+
+3. If your configuration is correct, you should see a list of available MCP servers, including one named `mssql`.
+
+4. You can now use the MS SQL MCP server in your Gemini CLI sessions to interact with your database.
+
 ---
 
 # TOOL DOCUMENTATION
