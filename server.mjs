@@ -16,8 +16,83 @@ import cors from 'cors';
 import helmet from 'helmet';
 import { rateLimit } from 'express-rate-limit';
 
+// Import utilities
+import { logger } from './Lib/logger.mjs';
+import { getReadableErrorMessage, createJsonRpcError } from './Lib/errors.mjs';
+
+// Check if .env file exists
+const envPath = path.resolve(process.cwd(), '.env');
+logger.info(`Checking for .env file at: ${envPath}`);
+logger.info(`.env file exists: ${fs.existsSync(envPath)}`);
+
+// Load environment variables from .env file first
+logger.info('STEP 1: Loading environment variables from .env file');
+dotenv.config();
+
+// Debug log for environment variables from .env
+logger.info('STEP 2: Environment variables after loading .env:');
+logger.info(`DB_SERVER from .env: ${process.env.DB_SERVER}`);
+logger.info(`DB_USER from .env: ${process.env.DB_USER}`);
+logger.info(`DB_DATABASE from .env: ${process.env.DB_DATABASE}`);
+
+// Parse command line arguments for database connection
+const args = process.argv.slice(2);
+const cliArgs = {};
+
+// Debug log for command line arguments
+logger.info('STEP 3: Command line arguments received:', args);
+
+// Process command line arguments in format --key value
+for (let i = 0; i < args.length; i++) {
+    if (args[i].startsWith('--') && i + 1 < args.length && !args[i + 1].startsWith('--')) {
+        const key = args[i].slice(2); // Remove the '--' prefix
+        cliArgs[key] = args[i + 1];
+        i++; // Skip the next argument as it's the value
+    }
+}
+
+// Debug log for parsed arguments
+logger.info('STEP 4: Parsed command line arguments:', cliArgs);
+
+// Override environment variables with command line arguments
+logger.info('STEP 5: Overriding environment variables with command line arguments');
+if (cliArgs.host) {
+    process.env.DB_SERVER = cliArgs.host;
+    logger.info(`  Setting DB_SERVER to ${cliArgs.host}`);
+}
+if (cliArgs.server) {
+    process.env.DB_SERVER = cliArgs.server;
+    logger.info(`  Setting DB_SERVER to ${cliArgs.server}`);
+}
+if (cliArgs.database) {
+    process.env.DB_DATABASE = cliArgs.database;
+    logger.info(`  Setting DB_DATABASE to ${cliArgs.database}`);
+}
+if (cliArgs.username) {
+    process.env.DB_USER = cliArgs.username;
+    logger.info(`  Setting DB_USER to ${cliArgs.username}`);
+}
+if (cliArgs.user) {
+    process.env.DB_USER = cliArgs.user;
+    logger.info(`  Setting DB_USER to ${cliArgs.user}`);
+}
+if (cliArgs.password) {
+    process.env.DB_PASSWORD = cliArgs.password;
+    logger.info(`  Setting DB_PASSWORD to ******`);
+}
+if (cliArgs.port) {
+    process.env.DB_PORT = cliArgs.port;
+    logger.info(`  Setting DB_PORT to ${cliArgs.port}`);
+}
+
+// Debug log for environment variables after overrides
+logger.info('STEP 6: Environment variables after override:');
+logger.info(`DB_SERVER after override: ${process.env.DB_SERVER}`);
+logger.info(`DB_USER after override: ${process.env.DB_USER}`);
+logger.info(`DB_DATABASE after override: ${process.env.DB_DATABASE}`);
+
 // Import database utilities
-import { initializeDbPool, executeQuery, getDbConfig } from './Lib/database.mjs';
+import { initializeDbPool, executeQuery, getDbConfig, initializeDbConfig } from './Lib/database.mjs';
 
 // Import tool implementations
 import { registerDatabaseTools } from './Lib/tools.mjs';
@@ -27,13 +102,6 @@ import { registerDatabaseResources } from './Lib/resources.mjs';
 
 // Import prompt implementations
 import { registerPrompts } from './Lib/prompts.mjs';
-
-// Import utilities
-import { logger } from './Lib/logger.mjs';
-import { getReadableErrorMessage, createJsonRpcError } from './Lib/errors.mjs';
-
-// Load environment variables
-dotenv.config();
 
 // Get the directory name
 const __filename = fileURLToPath(import.meta.url);
@@ -45,6 +113,14 @@ const TRANSPORT = process.env.TRANSPORT || 'stdio';
 const HOST = process.env.HOST || '0.0.0.0';
 const QUERY_RESULTS_PATH = process.env.QUERY_RESULTS_PATH || path.join(__dirname, 'query_results');
 const PING_INTERVAL = process.env.PING_INTERVAL || 60000; // Ping every 60 seconds by default
+
+// Initialize database configuration with the updated environment variables
+logger.info('STEP 7: Initializing database configuration with updated environment variables');
+initializeDbConfig();
+
+// Log the database connection that will be used
+const dbConfig = getDbConfig(true); // Get sanitized config (no password)
+logger.info(`Using database connection: ${dbConfig.server}/${dbConfig.database} as ${dbConfig.user}`);
 
 // Create results directory if it doesn't exist
 if (!fs.existsSync(QUERY_RESULTS_PATH)) {

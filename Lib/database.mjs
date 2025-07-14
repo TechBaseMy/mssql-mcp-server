@@ -3,30 +3,54 @@ import sql from 'mssql';
 import dotenv from 'dotenv';
 import { logger } from './logger.mjs';
 
-dotenv.config();
+// Don't call dotenv.config() here as it's already called in server.mjs
+// and would override command line arguments
 
-// Database configuration
-const dbConfig = {
-    user: process.env.DB_USER || 'sa',
-    password: process.env.DB_PASSWORD || 'YourStrong@Passw0rd',
-    server: process.env.DB_SERVER || 'localhost',
-    database: process.env.DB_DATABASE || 'master',
-    port: parseInt(process.env.DB_PORT) || 1433,
-    options: {
-        encrypt: process.env.DB_ENCRYPT === 'true', 
-        trustServerCertificate: process.env.DB_TRUST_SERVER_CERT !== 'false',
-        connectionTimeout: parseInt(process.env.DB_CONNECTION_TIMEOUT) || 15000,
-        requestTimeout: parseInt(process.env.DB_REQUEST_TIMEOUT) || 15000,
-        pool: {
-            max: parseInt(process.env.DB_POOL_MAX) || 10,
-            min: parseInt(process.env.DB_POOL_MIN) || 0,
-            idleTimeoutMillis: parseInt(process.env.DB_POOL_IDLE_TIMEOUT) || 30000
-        }
-    }
-};
-
-// Global SQL pool
+// Global variables
+let dbConfig = null;
 let sqlPool = null;
+
+/**
+ * Initialize the database configuration
+ * This should be called AFTER command-line arguments are processed
+ */
+export function initializeDbConfig() {
+    // Log actual environment variables for debugging
+    logger.info('DATABASE.MJS - ENVIRONMENT VARIABLES:');
+    logger.info(`DB_SERVER: ${process.env.DB_SERVER}`);
+    logger.info(`DB_USER: ${process.env.DB_USER}`);
+    logger.info(`DB_DATABASE: ${process.env.DB_DATABASE}`);
+    logger.info(`DB_PASSWORD: ${process.env.DB_PASSWORD ? '***' : 'undefined'}`);
+
+    // Database configuration
+    dbConfig = {
+        user: process.env.DB_USER || 'sa',
+        password: process.env.DB_PASSWORD || 'YourStrong@Passw0rd',
+        server: process.env.DB_SERVER || 'localhost',
+        database: process.env.DB_DATABASE || 'master',
+        port: parseInt(process.env.DB_PORT) || 1433,
+        options: {
+            encrypt: process.env.DB_ENCRYPT === 'true', 
+            trustServerCertificate: process.env.DB_TRUST_SERVER_CERT !== 'false',
+            connectionTimeout: parseInt(process.env.DB_CONNECTION_TIMEOUT) || 15000,
+            requestTimeout: parseInt(process.env.DB_REQUEST_TIMEOUT) || 15000,
+            pool: {
+                max: parseInt(process.env.DB_POOL_MAX) || 10,
+                min: parseInt(process.env.DB_POOL_MIN) || 0,
+                idleTimeoutMillis: parseInt(process.env.DB_POOL_IDLE_TIMEOUT) || 30000
+            }
+        }
+    };
+
+    // Log the actual config that will be used
+    logger.info('DATABASE.MJS - ACTUAL CONFIG:');
+    logger.info(`user: ${dbConfig.user}`);
+    logger.info(`server: ${dbConfig.server}`);
+    logger.info(`database: ${dbConfig.database}`);
+    logger.info(`port: ${dbConfig.port}`);
+    
+    return dbConfig;
+}
 
 /**
  * Initialize the SQL connection pool
@@ -34,6 +58,11 @@ let sqlPool = null;
  */
 export async function initializeDbPool() {
     try {
+        // Make sure config is initialized
+        if (!dbConfig) {
+            initializeDbConfig();
+        }
+        
         logger.info('Initializing SQL Server connection pool...');
         
         // Create and connect the pool
@@ -57,6 +86,10 @@ export async function initializeDbPool() {
  * @returns {Promise<void>}
  */
 async function ensurePoolConnected() {
+    if (!dbConfig) {
+        initializeDbConfig();
+    }
+    
     if (!sqlPool) {
         await initializeDbPool();
     } else if (!sqlPool.connected) {
@@ -229,6 +262,11 @@ export function sanitizeSqlIdentifier(identifier) {
  * @returns {object} - Database configuration
  */
 export function getDbConfig(maskPassword = false) {
+    // Make sure config is initialized
+    if (!dbConfig) {
+        initializeDbConfig();
+    }
+    
     const config = { ...dbConfig };
     
     if (maskPassword) {
