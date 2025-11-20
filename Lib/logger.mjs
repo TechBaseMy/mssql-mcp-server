@@ -56,8 +56,11 @@ export const logger = winston.createLogger({
     defaultMeta: { service: 'mcp-server' },
     format: logFormats[LOG_FORMAT] || logFormats.json,
     transports: [
-        // Console transport
-        new winston.transports.Console(),
+        // Console transport - CRITICAL: Log to stderr instead of stdout
+        // When using stdio transport, stdout is reserved for JSON-RPC messages only
+        new winston.transports.Console({
+            stderrLevels: ['error', 'warn', 'info', 'http', 'verbose', 'debug', 'silly']
+        }),
         
         // File transport with rotation
         new winston.transports.File({
